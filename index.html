@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Love Proposal — Play & Share</title>
+  <style>
+    :root{
+      --bg1:#061223;
+      --bg2:#0b2740;
+      --card: rgba(255,255,255,0.04);
+      --accent:#ff6b81;
+      --muted:#9fb0bf;
+      --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(255,107,129,0.06), transparent 8%),
+      linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%);color:#e8f1f8;overflow:hidden}
+    /* full screen canvases under everything */
+    canvas#bg, canvas#confetti{position:fixed;left:0;top:0;width:100%;height:100%;z-index:0;pointer-events:none}
+    .wrap{position:relative;z-index:10;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+    .card{width:100%;max-width:900px;padding:22px;border-radius:16px;background:var(--card);backdrop-filter: blur(6px);box-shadow:0 10px 40px rgba(2,6,23,0.6)}
+    header{display:flex;align-items:center;gap:12px}
+    header h1{margin:0;font-size:20px}
+    .lead{color:var(--muted);margin-top:6px;font-size:13px}
+    .controls{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+    input[type="text"]{flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:15px}
+    button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#ff9fb1);color:#081022;font-weight:700;cursor:pointer}
+    button.alt{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    .screen{margin-top:16px;background:rgba(0,0,0,0.2);padding:16px;border-radius:12px;min-height:260px;white-space:pre-wrap;font-family: 'Courier New', Courier, monospace;font-size:18px;line-height:1.6;overflow:auto;box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    .small{font-size:13px;color:var(--muted);margin-top:10px}
+    .actions{display:flex;gap:8px;margin-top:12px;align-items:center}
+    .audio-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+    .audio-controls input[type="file"]{color:var(--muted)}
+    .toggle{display:inline-flex;align-items:center;gap:8px}
+    .share-row{display:flex;gap:8px;margin-top:8px;align-items:center}
+    .heart-row{display:flex;gap:8px;justify-content:center;margin-top:16px;user-select:none}
+    .heart{font-size:22px;transform:scale(1);transition:transform .3s ease}
+    .heart.bounce{animation:beat 1s infinite}
+    @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+    .glow{filter:drop-shadow(0 6px 14px rgba(255,107,129,0.16));}
+    .big{font-size:22px;font-weight:700}
+    footer{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
+    .pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02);font-size:13px}
+    @media (max-width:720px){.screen{font-size:16px}}
+  </style>
+</head>
+<body>
+  <canvas id="bg"></canvas>
+  <canvas id="confetti"></canvas>
+
+  <div class="wrap">
+    <div class="card" role="main" aria-labelledby="title">
+      <header>
+        <div>
+          <h1 id="title">🎉 Love Proposal — Play & Share</h1>
+          <div class="lead">A single-file animated proposal. Type a name, play background music, and send a link that auto-plays.</div>
+        </div>
+      </header>
+
+      <div class="controls" style="margin-top:12px">
+        <input id="nameInput" type="text" placeholder="Enter their name (e.g. Priya)" />
+        <button id="startBtn" class="big">Send Proposal</button>
+        <button id="copyBtn" class="alt">Copy shareable link</button>
+        <button id="downloadBtn" class="alt">Download HTML</button>
+      </div>
+
+      <div class="screen" id="screen">Hello there 👋
+</div>
+
+      <div class="audio-controls">
+        <label class="pill">Upload music: <input id="fileInput" type="file" accept="audio/*" style="margin-left:8px"/></label>
+        <label class="pill">Or paste URL: <input id="urlInput" type="text" placeholder="https://...mp3" style="min-width:220px;margin-left:8px;padding:6px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit"/></label>
+        <button id="playAudioBtn" class="alt">Play / Pause</button>
+        <label class="pill">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="0.6" style="vertical-align:middle;margin-left:8px"/></label>
+        <label class="pill"><input id="ambientToggle" type="checkbox" /> Ambient synth</label>
+      </div>
+
+      <div class="share-row">
+        <div class="small">Tip: Share the copied link — it will auto-play the message when opened. (Audio may require a tap due to browser autoplay policy.)</div>
+      </div>
+
+      <div class="heart-row" aria-hidden="true">
+        <div class="heart">❤</div>
+        <div class="heart">💛</div>
+        <div class="heart">💚</div>
+        <div class="heart">💙</div>
+        <div class="heart">💜</div>
+      </div>
+
+      <footer>Want hosting help? Read the GitHub Pages steps below.</footer>
+    </div>
+  </div>
+
+  <script>
+    // --- Utilities ---
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const screen = document.getElementById('screen');
+    const nameInput = document.getElementById('nameInput');
+    const startBtn = document.getElementById('startBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const urlInput = document.getElementById('urlInput');
+    const playAudioBtn = document.getElementById('playAudioBtn');
+    const volumeControl = document.getElementById('volume');
+    const ambientToggle = document.getElementById('ambientToggle');
+    const hearts = document.querySelectorAll('.heart');
+
+    // --- Typing effect (as in your Java) ---
+    async function typeOut(el, message, delay){
+      for(const ch of message){
+        el.textContent += ch;
+        await sleep(delay);
+        el.scrollTop = el.scrollHeight;
+      }
+      el.textContent += '\\n';
+    }
+
+    // --- Confetti system ---
+    const confCanvas = document.getElementById('confetti');
+    const confCtx = confCanvas.getContext('2d');
+    let confettiParticles = [];
+    function resizeConfetti(){ confCanvas.width = innerWidth; confCanvas.height = innerHeight; }
+    window.addEventListener('resize', resizeConfetti);
+    resizeConfetti();
+
+    function spawnConfetti(x, y, count = 40){
+      const colors = ['#ff6b81','#ffd166','#97d8c4','#bde0fe','#d4b5ff'];
+      for(let i=0;i<count;i++){
+        confettiParticles.push({
+          x: x || Math.random()*confCanvas.width,
+          y: y || Math.random()*confCanvas.height*0.5,
+          vx: (Math.random()-0.5)*6,
+          vy: Math.random()*-6 - 2,
+          size: 6 + Math.random()*8,
+          color: colors[(Math.random()*colors.length)|0],
+          rot: Math.random()*360,
+          spin: (Math.random()-0.5)*8,
+          life: 0,
+          ttl: 90 + Math.random()*60
+        });
+      }
+    }
+
+    function updateConfetti(){
+      confCtx.clearRect(0,0,confCanvas.width, confCanvas.height);
+      for(let i=confettiParticles.length-1;i>=0;i--){
+        const p = confettiParticles[i];
+        p.vy += 0.18; // gravity
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.spin;
+        p.life++;
+        confCtx.save();
+        confCtx.translate(p.x, p.y);
+        confCtx.rotate(p.rot * Math.PI / 180);
+        confCtx.fillStyle = p.color;
+        confCtx.fillRect(-p.size/2, -p.size/2, p.size, p.size*0.6);
+        confCtx.restore();
+        if(p.y > confCanvas.height + 50 || p.life > p.ttl) confettiParticles.splice(i,1);
+      }
+      requestAnimationFrame(updateConfetti);
+    }
+    updateConfetti();
+
+    // --- Background particle hearts (canvas) ---
+    const bgCanvas = document.getElementById('bg');
+    const bgCtx = bgCanvas.getContext('2d');
+    let heartsParticles = [];
+    function resizeBg(){ bgCanvas.width = innerWidth; bgCanvas.height = innerHeight; }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    function spawnHeart(){
+      heartsParticles.push({
+        x: Math.random()*bgCanvas.width,
+        y: bgCanvas.height + 20,
+        vx: (Math.random()-0.5)*0.6,
+        vy: -1 - Math.random()*1.2,
+        size: 8 + Math.random()*18,
+        alpha: 0.06 + Math.random()*0.2,
+        life: 0,
+        ttl: 300 + Math.random()*300
+      });
+    }
+    setInterval(()=>{ if(heartsParticles.length < 40) spawnHeart(); }, 500);
+
+    function drawHeartPath(ctx, x, y, size){
+      // draw a heart-like shape using bezier curves
+      ctx.beginPath();
+      const top = y - size*0.25;
+      ctx.moveTo(x, top);
+      ctx.bezierCurveTo(x+size, top-size, x+size, y+size*0.6, x, y+size);
+      ctx.bezierCurveTo(x-size, y+size*0.6, x-size, top-size, x, top);
+      ctx.closePath();
+    }
+
+    function updateBg(){
+      bgCtx.clearRect(0,0,bgCanvas.width, bgCanvas.height);
+      for(let i=heartsParticles.length-1;i>=0;i--){
+        const p = heartsParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+        const alpha = Math.max(0, p.alpha * (1 - p.life/p.ttl));
+        bgCtx.fillStyle = `rgba(255,107,129,${alpha})`;
+        bgCtx.strokeStyle = `rgba(255,107,129,${alpha*0.6})`;
+        drawHeartPath(bgCtx, p.x, p.y, p.size);
+        bgCtx.fill();
+        if(p.life > p.ttl) heartsParticles.splice(i,1);
+      }
+      requestAnimationFrame(updateBg);
+    }
+    updateBg();
+
+    // --- Audio handling ---
+    let audioEl = new Audio();
+    audioEl.loop = true;
+    audioEl.crossOrigin = 'anonymous';
+    let audioPlaying = false;
+    let ambientCtx = null;
+    let ambientInterval = null;
+
+    function setVolume(v){
+      try{ audioEl.volume = v; }catch(e){}
+    }
+    volumeControl.addEventListener('input', ()=> setVolume(volumeControl.value));
+
+    playAudioBtn.addEventListener('click', async ()=>{
+      if(ambientToggle.checked){
+        if(!ambientCtx){ await startAmbient(); audioPlaying = true; playAudioBtn.textContent = 'Pause'; }
+        else { stopAmbient(); audioPlaying = false; playAudioBtn.textContent = 'Play / Pause'; }
+        return;
+      }
+      if(!audioEl.src){ alert('Please upload a file or paste an audio URL first.'); return; }
+      try{
+        if(audioEl.paused){ await audioEl.play(); audioPlaying = true; playAudioBtn.textContent = 'Pause'; }
+        else{ audioEl.pause(); audioPlaying = false; playAudioBtn.textContent = 'Play / Pause'; }
+      }catch(err){
+        console.warn('Playback prevented: user gesture required.', err);
+      }
+    });
+
+    fileInput.addEventListener('change', ()=>{
+      if(fileInput.files && fileInput.files[0]){
+        const url = URL.createObjectURL(fileInput.files[0]);
+        audioEl.src = url;
+        setVolume(volumeControl.value);
+        audioEl.load();
+      }
+    });
+    urlInput.addEventListener('change', ()=>{
+      const url = urlInput.value.trim();
+      if(url){ audioEl.src = url; setVolume(volumeControl.value); audioEl.load(); }
+    });
+
+    async function startAmbient(){
+      try{
+        ambientCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const master = ambientCtx.createGain();
+        master.gain.value = 0.12;
+        master.connect(ambientCtx.destination);
+
+        // create a gentle pad with two oscillators and slow LFO
+        const osc1 = ambientCtx.createOscillator();
+        const osc2 = ambientCtx.createOscillator();
+        const oscGain1 = ambientCtx.createGain();
+        const oscGain2 = ambientCtx.createGain();
+
+        osc1.type = 'sine'; osc2.type = 'triangle';
+        osc1.frequency.value = 220; // A3
+        osc2.frequency.value = 330; // E4
+
+        oscGain1.gain.value = 0.6;
+        oscGain2.gain.value = 0.5;
+
+        // create slow LFO to modulate filter
+        const lfo = ambientCtx.createOscillator();
+        const lfoGain = ambientCtx.createGain();
+        lfo.type = 'sine'; lfo.frequency.value = 0.05; lfoGain.gain.value = 40;
+
+        const filter = ambientCtx.createBiquadFilter();
+        filter.type = 'lowpass'; filter.frequency.value = 600;
+
+        // reverb-like effect using delay + feedback
+        const delay = ambientCtx.createDelay();
+        delay.delayTime.value = 0.6;
+        const feedback = ambientCtx.createGain();
+        feedback.gain.value = 0.35;
+
+        // connect nodes
+        osc1.connect(oscGain1); osc2.connect(oscGain2);
+        oscGain1.connect(filter); oscGain2.connect(filter);
+        filter.connect(master);
+        filter.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(master);
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.frequency);
+
+        osc1.start(); osc2.start(); lfo.start();
+
+        // gentle arpeggio scheduler — schedule notes every 1.6s
+        const notes = [220, 277.18, 329.63, 261.63]; // A3, C#4, E4, C4
+        let idx = 0;
+        ambientInterval = setInterval(()=>{
+          // change frequencies slowly for a pad effect
+          const now = ambientCtx.currentTime;
+          osc1.frequency.linearRampToValueAtTime(notes[idx%notes.length], now + 0.1);
+          osc2.frequency.linearRampToValueAtTime(notes[(idx+2)%notes.length], now + 0.1);
+          idx++;
+        }, 1600);
+
+      }catch(e){
+        console.warn('Ambient start failed:', e);
+      }
+    }
+
+    function stopAmbient(){
+      try{
+        if(ambientInterval) clearInterval(ambientInterval);
+        if(ambientCtx) ambientCtx.close();
+      }catch(e){}
+      ambientCtx = null;
+      ambientInterval = null;
+    }
+
+    // --- Proposal sequence (mirrors your Java timings) ---
+    async function runProposal(name, autoStartAudio){
+      screen.textContent = '';
+      hearts.forEach(h => h.classList.add('bounce'));
+
+      await typeOut(screen, `❤ Dear ${name},`, 100);
+      await typeOut(screen, `I have something special to say... 💌`, 100);
+      await sleep(1500);
+
+      await typeOut(screen, `🌟 From the moment I met you,`, 100);
+      await typeOut(screen, `my world has been brighter ☀,`, 100);
+      await typeOut(screen, `my heart fuller 💖,`, 100);
+      await typeOut(screen, `and my smile bigger 😊.`, 100);
+      await sleep(1000);
+
+      await typeOut(screen, `\\nSo today, I just want to say:`, 100);
+      await sleep(800);
+      await typeOut(screen, `\\n💘 I LOVE YOU 💘`, 200);
+      await typeOut(screen, `Will you be mine forever? 💍`, 150);
+      await typeOut(screen, `\\n❤💛💚💙💜`, 300);
+
+      // confetti and hearts pop
+      spawnConfetti(innerWidth/2, innerHeight/3, 70);
+      hearts.forEach(h => h.classList.remove('bounce'));
+      await sleep(300);
+      screen.textContent += '\\n\\n🎉🎉 Proposal sent successfully! 🎉🎉\\n';
+
+      // try to start audio if asked and if user interaction happened
+      if(autoStartAudio){
+        try{
+          if(ambientToggle.checked){
+            if(!ambientCtx) await startAmbient();
+          }else{
+            // try to play uploaded/URL audio (may be blocked until user gesture)
+            if(audioEl.src){
+              await audioEl.play().catch(()=>{ /* ignore */ });
+            }
+          }
+        }catch(e){}
+      }
+    }
+
+    // --- Share link builder ---
+    function buildShareLink(name){
+      const url = new URL(window.location.href.split('#')[0]);
+      url.searchParams.set('name', name);
+      url.searchParams.set('auto', '1');
+      return url.toString();
+    }
+
+    copyBtn.addEventListener('click', async ()=>{
+      const name = (nameInput.value || '').trim();
+      if(!name){ alert('Please enter a name to include in the link.'); nameInput.focus(); return; }
+      const link = buildShareLink(name);
+      try{ await navigator.clipboard.writeText(link); alert('Link copied! Paste it in a message.'); }
+      catch(err){ prompt('Copy this link:', link); }
+    });
+
+    // Download the current HTML (single-file) so user can host it themselves
+    downloadBtn.addEventListener('click', ()=>{
+      const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'love_proposal_advanced.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+
+    // Handle Start button
+    startBtn.addEventListener('click', async ()=>{
+      const name = (nameInput.value || '').trim() || 'You';
+      // create AudioContext on first user gesture if ambient selected
+      if(ambientToggle.checked && !ambientCtx){
+        try{ await startAmbient(); }catch(e){ console.warn(e); }
+      }
+      // attempt autoplay of provided audio if present
+      let autoStartAudio = true;
+      if(!audioEl.src && !ambientToggle.checked) autoStartAudio = false;
+      await runProposal(name, autoStartAudio);
+    });
+
+    // load from URL params
+    window.addEventListener('DOMContentLoaded', async ()=>{
+      const params = new URLSearchParams(window.location.search);
+      const n = params.get('name');
+      const auto = params.get('auto');
+      if(n){ nameInput.value = n; }
+      if(n && auto === '1'){
+        // small delay so page contents render
+        await sleep(600);
+        // simulate click (this is considered a programmatic click; audio may be blocked)
+        startBtn.click();
+      }
+    });
+
+    // ensure volume control applies
+    setVolume(volumeControl.value);
+
+    // cleanup on page hide
+    window.addEventListener('pagehide', ()=>{
+      if(audioEl){ audioEl.pause(); }
+      stopAmbient();
+    });
+  </script>
+
+  <!-- Hosting instructions (human-readable) -->
+  <details style="color:var(--muted);margin:18px 24px">
+    <summary style="cursor:pointer;font-weight:700">How to host this on GitHub Pages (step-by-step)</summary>
+    <ol style="margin-top:10px">
+      <li>Create a GitHub account if you don't have one: <strong>github.com</strong>.</li>
+      <li>Make a new repository (public is fine) — give it a name like <code>love-proposal</code>.</li>
+      <li>On your machine: clone the repo, copy <code>love_proposal_advanced.html</code> into the repo directory, then:</li>
+      <pre style="white-space:pre-wrap;background:rgba(0,0,0,0.18);padding:8px;border-radius:8px">git init
+git add love_proposal_advanced.html
+git commit -m "Add proposal page"
+git branch -M main
+git remote add origin https://github.com/&lt;your-username&gt;/&lt;repo-name&gt;.git
+git push -u origin main</pre>
+      <li>Open the repository page on GitHub, go to <strong>Settings → Pages</strong> (or "Pages" in the left sidebar), then under "Source" choose <strong>main branch / root</strong> and click Save.</li>
+      <li>After a minute or two your page will be live at: <code>https://&lt;your-username&gt;.github.io/&lt;repo-name&gt;/love_proposal_advanced.html</code>. Share that URL (add <code>?name=Priya&auto=1</code> to auto-play the typing sequence).</li>
+      <li>Alternative quick method (no git): on GitHub repo page click "Add file" → "Upload files", upload the HTML file, commit, then enable Pages as above.</li>
+    </ol>
+    <p style="margin-top:8px">Notes:</p>
+    <ul>
+      <li>Browsers often block autoplay of audio — the typing animation will run but audio usually needs a tap. If you want audio to reliably play, ask the recipient to press the Play button after the page opens.</li>
+      <li>If you want the page to be private, GitHub Pages doesn't support private pages on free plan; consider sending the file directly or using a password gate (I can add simple password protection to the page if you want).</li>
+    </ul>
+  </details>
+</body>
+</html>
